@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Page } from 'playwright';
 import { BrowserService } from '../browser/browser.service';
+import { OcrService } from './ocr.service';
 import { SecurityAnswer } from '../../common/types';
 import { URLS, SELECTORS } from '../../common/constants';
 import { generatePassword } from '../../common/utils';
@@ -16,6 +17,7 @@ export class AppleIdService {
     private readonly dob: string,
     private readonly answers: SecurityAnswer,
     private readonly browserService: BrowserService,
+    private readonly ocrService?: OcrService,
   ) {}
 
   async init(): Promise<void> {
@@ -55,12 +57,33 @@ export class AppleIdService {
       // Process captcha
       let captchaAttempts = 0;
       while (captchaAttempts < 10) {
-        const captchaInput = await this.page.locator(SELECTORS.CAPTCHA_INPUT);
-        if (await captchaInput.isVisible()) {
-          // For now, we'll need manual intervention for captcha
-          // In production, you could integrate with OCR service
-          this.logger.warn('Captcha detected - manual intervention required');
-          await this.page.waitForTimeout(5000);
+        const captchaImage = await this.page.locator(SELECTORS.CAPTCHA_IMAGE).first();
+
+        if (await captchaImage.isVisible().catch(() => false)) {
+          // 获取验证码图片
+          const imageSrc = await captchaImage.getAttribute('src');
+
+          if (imageSrc && this.ocrService) {
+            this.logger.log('Captcha detected, attempting OCR recognition...');
+
+            // 使用 OCR 识别验证码
+            const captchaCode = await this.ocrService.recognizeCaptcha(imageSrc);
+
+            if (captchaCode) {
+              this.logger.log(`OCR result: ${captchaCode}`);
+
+              // 输入验证码
+              const captchaInput = await this.page.locator(SELECTORS.CAPTCHA_INPUT);
+              await captchaInput.fill(captchaCode);
+              await this.page.waitForTimeout(500);
+            } else {
+              this.logger.warn('OCR failed, waiting for manual input...');
+              await this.page.waitForTimeout(5000);
+            }
+          } else if (!this.ocrService) {
+            this.logger.warn('OCR service not available, waiting for manual input...');
+            await this.page.waitForTimeout(5000);
+          }
         }
 
         await this.page.click(SELECTORS.BUTTON_PRIMARY);
@@ -75,6 +98,8 @@ export class AppleIdService {
           this.logger.log('Captcha passed');
           break;
         }
+
+        this.logger.warn(`Captcha attempt ${captchaAttempts + 1} failed, retrying...`);
         captchaAttempts++;
       }
 
@@ -236,6 +261,70 @@ export class AppleIdService {
       return await this.processPassword();
     } catch (error) {
       this.logger.error(`Unlock failed: ${error.message}`);
+      return false;
+    }
+  }
+
+  async unlock2FA(): Promise<boolean> {
+    this.logger.log('Starting 2FA unlock process...');
+
+    try {
+      // 点击 unenroll (关闭2FA) 按钮
+      const unenrollButton = await this.page.locator('.unenroll');
+      if (!(await unenrollButton.isVisible({ timeout: 5000 }))) {
+        this.logger.error('Cannot find disable 2FA button');
+        return false;
+      }
+
+      await unenrollButton.click();
+      await this.page.waitForTimeout(1000);
+
+      // 点击确认按钮
+      const confirmButton = this.page.locator(
+        'button:has-text("Turn Off"), button:has-text("Continue")',
+      );
+      await confirmButton.first().click();
+      await this.page.waitForTimeout(1000);
+
+      // 检查是否被Apple拒绝
+      const errorContent = await this.page
+        .locator(SELECTORS.ERROR_MESSAGE)
+        .isVisible()
+        .catch(() => false);
+      if (errorContent) {
+        const errorMsg = await this.page.locator(SELECTORS.ERROR_MESSAGE).textContent();
+        this.logger.error(`Rejected by Apple: ${errorMsg}`);
+        return false;
+      }
+
+      // 填写生日
+      if (!(await this.processDOB())) {
+        this.logger.error('Failed to process DOB during 2FA unlock');
+        return false;
+      }
+
+      // 填写安全问题
+      if (!(await this.processSecurityQuestions())) {
+        this.logger.error('Failed to process security questions during 2FA unlock');
+        return false;
+      }
+
+      await this.page.waitForTimeout(1000);
+
+      // 点击继续按钮
+      await this.page.click(SELECTORS.BUTTON_PRIMARY);
+      await this.page.waitForTimeout(2000);
+
+      // 修改密码
+      if (!(await this.processPassword())) {
+        this.logger.error('Failed to process password during 2FA unlock');
+        return false;
+      }
+
+      this.logger.log('2FA unlock successful');
+      return true;
+    } catch (error) {
+      this.logger.error(`2FA unlock failed: ${error.message}`);
       return false;
     }
   }

@@ -95,6 +95,56 @@ You can also use command line arguments:
 npm start -- -api_url=http://your-api.com -api_key=your-key -taskid=123 -lang=zh_cn -debug
 ```
 
+## Testing with Mock Server
+
+For development and testing without a real backend API, we provide a simple mock server:
+
+### Quick Start
+
+1. Install test server dependencies:
+```bash
+cd test-server
+npm install
+cd ..
+```
+
+2. Run both servers at once:
+```bash
+./scripts/run-with-test-server.sh
+```
+
+This will:
+- Start the mock API server on `http://localhost:3001`
+- Start the main application connected to the mock server
+
+### Manual Testing
+
+1. Start the test server:
+```bash
+cd test-server
+npm start
+```
+
+2. In another terminal, run the main app:
+```bash
+npm start -- -api_url=http://localhost:3001 -api_key=test-key -taskid=test-123 -lang=zh_cn -debug
+```
+
+3. Test API endpoints:
+```bash
+cd test-server
+./test-api.sh
+```
+
+### Mock Server Features
+
+- **Port**: 3001
+- **Endpoints**: All API endpoints with mock responses
+- **Configuration**: Editable via `test-server/config.json`
+- **Live Updates**: Modify config and test data on the fly
+- **Health Check**: `http://localhost:3001/health`
+- **View Config**: `http://localhost:3001/config`
+
 ## Architecture
 
 This project follows the KISS (Keep It Simple, Stupid) principle with a clean modular structure:
