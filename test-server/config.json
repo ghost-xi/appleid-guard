@@ -1,0 +1,23 @@
+{
+  "username": "test@icloud.com",
+  "password": "NewPassword123",
+  "dob": "01/01/1990",
+  "q1": "母亲的名字",
+  "a1": "李华",
+  "q2": "第一只宠物的名字",
+  "a2": "旺财",
+  "q3": "出生的城市",
+  "a3": "北京",
+  "check_interval": 60,
+  "webdriver": "local",
+  "tg_chat_id": "",
+  "tg_bot_token": "",
+  "wx_pusher_id": "",
+  "webhook": "",
+  "task_headless": true,
+  "fail_retry": true,
+  "enable": true,
+  "enable_delete_devices": false,
+  "check_password_correct": false,
+  "enable_auto_update_password": false
+}
