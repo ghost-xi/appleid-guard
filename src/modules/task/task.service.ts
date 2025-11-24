@@ -117,12 +117,20 @@ export class TaskService {
       const originalPassword = config.password;
 
       // Check account status
+      let unlockResult = true;
       if (await appleIdService.check2FA()) {
         this.logger.log(this.locale.twoStepDetected);
-        // 2FA unlock logic would go here
+        unlockResult = await appleIdService.unlock2FA();
+        if (!unlockResult) {
+          this.logger.error(this.locale.UnlockFail);
+          await this.sendNotification(this.locale.UnlockFail);
+          jobSuccess = false;
+          return;
+        }
       } else if (!(await appleIdService.check())) {
         this.logger.log(this.locale.accountLocked);
-        if (!(await appleIdService.unlock())) {
+        unlockResult = await appleIdService.unlock();
+        if (!unlockResult) {
           this.logger.error(this.locale.UnlockFail);
           await this.sendNotification(this.locale.UnlockFail);
           jobSuccess = false;

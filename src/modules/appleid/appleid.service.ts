@@ -265,6 +265,70 @@ export class AppleIdService {
     }
   }
 
+  async unlock2FA(): Promise<boolean> {
+    this.logger.log('Starting 2FA unlock process...');
+
+    try {
+      // 点击 unenroll (关闭2FA) 按钮
+      const unenrollButton = await this.page.locator('.unenroll');
+      if (!(await unenrollButton.isVisible({ timeout: 5000 }))) {
+        this.logger.error('Cannot find disable 2FA button');
+        return false;
+      }
+
+      await unenrollButton.click();
+      await this.page.waitForTimeout(1000);
+
+      // 点击确认按钮
+      const confirmButton = this.page.locator(
+        'button:has-text("Turn Off"), button:has-text("Continue")',
+      );
+      await confirmButton.first().click();
+      await this.page.waitForTimeout(1000);
+
+      // 检查是否被Apple拒绝
+      const errorContent = await this.page
+        .locator(SELECTORS.ERROR_MESSAGE)
+        .isVisible()
+        .catch(() => false);
+      if (errorContent) {
+        const errorMsg = await this.page.locator(SELECTORS.ERROR_MESSAGE).textContent();
+        this.logger.error(`Rejected by Apple: ${errorMsg}`);
+        return false;
+      }
+
+      // 填写生日
+      if (!(await this.processDOB())) {
+        this.logger.error('Failed to process DOB during 2FA unlock');
+        return false;
+      }
+
+      // 填写安全问题
+      if (!(await this.processSecurityQuestions())) {
+        this.logger.error('Failed to process security questions during 2FA unlock');
+        return false;
+      }
+
+      await this.page.waitForTimeout(1000);
+
+      // 点击继续按钮
+      await this.page.click(SELECTORS.BUTTON_PRIMARY);
+      await this.page.waitForTimeout(2000);
+
+      // 修改密码
+      if (!(await this.processPassword())) {
+        this.logger.error('Failed to process password during 2FA unlock');
+        return false;
+      }
+
+      this.logger.log('2FA unlock successful');
+      return true;
+    } catch (error) {
+      this.logger.error(`2FA unlock failed: ${error.message}`);
+      return false;
+    }
+  }
+
   async loginAppleId(): Promise<boolean> {
     this.logger.log('Start logging in Apple ID');
     try {
