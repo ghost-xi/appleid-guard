@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  appleid-guard:
+    build: .
+    container_name: appleid-guard
+    environment:
+      - API_URL=${API_URL}
+      - API_KEY=${API_KEY}
+      - TASK_ID=${TASK_ID}
+      - LANG=${LANG:-zh_cn}
+      - DEBUG=${DEBUG:-false}
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+    # Uncomment for debugging
+    # ports:
+    #   - "3000:3000"
