@@ -14,7 +14,7 @@
   "tg_bot_token": "",
   "wx_pusher_id": "",
   "webhook": "",
-  "task_headless": true,
+  "task_headless": false,
   "fail_retry": true,
   "enable": true,
   "enable_delete_devices": false,
