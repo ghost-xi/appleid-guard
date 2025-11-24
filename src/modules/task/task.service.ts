@@ -3,6 +3,7 @@ import { SchedulerRegistry } from '@nestjs/schedule';
 import { ApiService } from '../api/api.service';
 import { BrowserService } from '../browser/browser.service';
 import { AppleIdService } from '../appleid/appleid.service';
+import { OcrService } from '../appleid/ocr.service';
 import { NotificationService } from '../notification/notification.service';
 import { TaskConfig, SecurityAnswer } from '../../common/types';
 import { getLocale } from '../../locales';
@@ -19,6 +20,7 @@ export class TaskService {
     private readonly apiService: ApiService,
     private readonly browserService: BrowserService,
     private readonly notificationService: NotificationService,
+    private readonly ocrService: OcrService,
     private readonly schedulerRegistry: SchedulerRegistry,
     private readonly taskId: string,
     private readonly lang: string,
@@ -95,6 +97,7 @@ export class TaskService {
       config.dob,
       answers,
       this.browserService,
+      this.ocrService,
     );
 
     await appleIdService.init();

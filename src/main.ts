@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { TaskService } from './modules/task/task.service';
 import { ApiService } from './modules/api/api.service';
 import { BrowserService } from './modules/browser/browser.service';
+import { OcrService } from './modules/appleid/ocr.service';
 import { NotificationService } from './modules/notification/notification.service';
 import { SchedulerRegistry } from '@nestjs/schedule';
 
@@ -36,13 +37,17 @@ async function bootstrap() {
   // Create services manually
   const apiService = new ApiService(apiUrl, apiKey);
   const browserService = new BrowserService();
+  const ocrService = new OcrService();
   const notificationService = new NotificationService();
   const schedulerRegistry = app.get(SchedulerRegistry);
+
+  logger.log('OCR Service (Tesseract.js) enabled for captcha recognition');
 
   const taskService = new TaskService(
     apiService,
     browserService,
     notificationService,
+    ocrService,
     schedulerRegistry,
     taskId,
     lang,

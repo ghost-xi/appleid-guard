@@ -29,18 +29,31 @@ export class TaskModule {
       providers: [
         {
           provide: TaskService,
-          useFactory: (apiService, browserService, notificationService, schedulerRegistry) => {
+          useFactory: (
+            apiService,
+            browserService,
+            notificationService,
+            ocrService,
+            schedulerRegistry,
+          ) => {
             return new TaskService(
               apiService,
               browserService,
               notificationService,
+              ocrService,
               schedulerRegistry,
               taskId,
               lang,
               debug,
             );
           },
-          inject: ['ApiService', 'BrowserService', 'NotificationService', 'SchedulerRegistry'],
+          inject: [
+            'ApiService',
+            'BrowserService',
+            'NotificationService',
+            'OcrService',
+            'SchedulerRegistry',
+          ],
         },
       ],
       exports: [TaskService],
